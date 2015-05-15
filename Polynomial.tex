@@ -1,0 +1,201 @@
+\chapter{Polynomial Utilities}
+\section{Program Headers}
+\paratag{SWDDD POLY HEADER}
+This file and all items defined in it are contained in the module ``Polynomial''.  Eventually, a data type and class for Polynomial should be added.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The program \shalltag{10} be in a module named ``Polynomial''.
+\item The functions polyEval, polyAdd, polyMul, polyIntegrate, polyDerive, and polyShow \shalltag{20} be exported from the module.
+\end{itemize}
+
+\subsection{Header Code}
+\begin{code}
+module Polynomial ( polyEval, polyAdd, polyMul, polyIntegrate, polyDerive, polyShow ) where
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Evaluate a Polynomial Using Newton's Method}
+\paratag{SWRDD POLY EVAL}
+This function evaluates a polynomial at a specific value using Newton's method.  A polynomial of standard form:
+\[
+p(X) = a_nX^n + a_{n-1}X^{n-1} \cdots + a_2X^2 + a_1X + a_0
+\]
+
+is rewriten as:
+\[
+p(X) = ((((a_nX) + a_{n-1})X) + \cdots + a_2)X + a_1)X + a_0
+\]
+Evaluating the polynomial in this fashion also minimizes the number of multiplications required.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The newton function \shalltag{10} evaluate a polynomial at a specified value.
+\item The polynomial \shalltag{20} be stored in a list containing the $a_n$ coefficients.
+\item The coefficients in the list \shalltag{30} be arranged with $a_0$ first.
+\end{itemize}
+
+\subsection{Function Definition}
+This function evaluates a polynomial using Newton's method.
+\begin{code}
+polyEval :: Num a => [a] -> a -> a
+polyEval [] a = 0
+polyEval (x:xs) y = x + y * polyEval xs y
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Add Two Polynomials}
+\paratag{SWRDD POLY ADD}
+This function adds two polynomials of order $a_1$ and $a_2$.
+\[
+P_1(X) = \sum_{n = 0}^{a_1} c_nX^n
+\]
+and
+\[
+P_2(X) = \sum_{n = 0}^{a_2} d_nX^n
+\]
+the sum is given by
+\[
+P_1(X) + P_2(X)= \sum_{n = 0}^{MAX (a_1, a_2)} (c_n + d_n)X^n
+\]
+
+\subsection{Requirements}
+\begin{itemize}
+\item The sum of two polynomials \shalltag{10} be the sum of the corresponding coefficients.
+\item Unmatched coefficients \shalltag{20} be passed unchanged to the output.
+\end{itemize}
+
+\subsection{Function Definition}
+This function adds two polynomials producing a third.
+\begin{code}
+polyAdd :: (Num a) => [a] -> [a] -> [a]
+polyAdd [] [] = []
+polyAdd x []  = x
+polyAdd [] x  = x
+polyAdd (x:xs) (y:ys) = x + y :  polyAdd xs ys
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Multiply Two Polynomials}
+\paratag{SWRDD POLY MULTIPLY}
+This function multiplies two polynomials of order $a_1$ and $a_2$.  Thus:
+\[
+P_1(X) = \sum_{i = 0}^{a_1}c_iX^i, P_2(X) = \sum_{j = 0}^{a_2}d_jX^j
+\]
+The product then is:
+\[
+P_1(X) \times P_2(X) = \sum_{i = 0}^{a_1}c_iX^i \times \sum_{j = 0}^{a_2}d_jX^j = \sum_{i = 0}^{a_1} \sum_{j = 0}^{a_2} c_i d_j X^{i + j}
+\]
+
+\subsection{Requirements}
+\begin{itemize}
+\item The product of two polynomials \shalltag{10} be the sum of the the products of all the monomials.
+\end{itemize}
+
+\subsection{Function Definition}
+This function multiplies two polynomials producing a third.  This includes a function that multiplies all the coefficients in a polynomial by a scalar value.
+\begin{code}
+polyScale :: (Num a) => [a] -> a -> [a]
+polyScale [] _ = []
+polyScale _ 0  = []
+polyScale xs y = [x*y | x<-xs]
+
+polyMul :: (Num a) => [a] -> [a] -> [a]
+polyMul [] [] = []
+polyMul _ []  = []
+polyMul [] _  = []
+polyMul (x:xs) y = polyAdd (polyScale y x) (polyMul xs (0 : y))
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Integrate a Polynomial}
+\paratag{SWRDD POLY INTEGRATE}
+The integral of a monomial with respect to $X$, $c_{n}X^n$ is given by $\frac{c_n}{n+1}X^{n+1}$.  A polynomial is simply a sum of monomials.  If
+\[
+P(X) = \sum_{n = 0}^{a} c_nX^n
+\]
+then
+\[
+\int P(X) dX = \sum_{n = 0}^{a}\int c_nX^n dX\\
+= \sum_{n = 0}^{a} \frac{c_n}{n + 1}X^{n+1}
+\]
+
+\subsection{Requirements}
+\begin{itemize}
+\item The integral of a polynomial \shalltag{10} shall be the sum of the integral of each monomial making up the polynomial.
+\item The integral of the monomial $c_{n}X^n$ \shalltag{20} be $\frac{c_{n}}{n+1}X^{n+1}$.
+\item The constant term in the result \shalltag{30} be set to zero.
+\end{itemize}
+
+\subsection{Function Definition}
+Note that since division is involved, the coefficients need to be of the fractional type.
+\begin{code}
+polyIntegrate :: (Fractional a) => [a] -> [a]
+polyIntegrate [] = []
+polyIntegrate (x:xs) = 0 : x : helper xs 2
+  where
+    helper :: (Fractional a) => [a] -> a -> [a]
+    helper (x:xs) n
+      | xs == []  = [x / n]
+      | otherwise = (x / n) : helper xs (n + 1)
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Find the Derivative of a Polynomial}
+\paratag{SWRDD POLY DERIVATIVE}
+The derivative of a monomial with respect to $X$, $c_{c}X^n$ is given by $nc_{n}X^{n-1}$.  A polynomial is simply a sum of monomials.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The derivative of a polynomial \shalltag{10} shall be the sum of the derivative of each monomial making up the polynomial.
+\item The derivative of a constant monomial \shalltag{20} be zero.
+\item The derivative of the monomial $c_{n}X^n$ \shalltag{30} be $nc_{n}X^{n-1}$.
+\end{itemize}
+
+\subsection{Function Definition}
+\begin{code}
+polyDerive :: (Num a) => [a] -> [a]
+polyDerive [] = []
+polyDerive (x:xs)
+  | xs == []  = [0]
+  | otherwise = helper xs 1
+  where
+    helper :: (Num a) => [a] -> a -> [a]
+    helper (x:xs) n
+      | xs == []  = [n * x]
+      | otherwise = (n * x) : helper xs (n + 1)
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Display a Polynomial}
+\paratag{SWRDD POLY DISPLAY}
+This function converts a polynomial in standard form to a string.  Polynomials are stored as a list of coefficients.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The coefficients of a polynomials \shalltag{10} be extracted from a list.
+\item The coefficients in the list \shalltag{20} be arranged with the lowest order coefficient first.
+\item If the coefficient is zero, that term \shalltag{30} be omitted.
+\item If the coefficient is one, the coefficient \shalltag{40} be omitted.
+\end{itemize}
+
+\subsection{Function Definition}
+\begin{code}
+polyShow :: (Num a, Ord a) => [a] -> String
+polyShow [] = ""
+polyShow (x:xs)
+  | x == 0        = helper xs 1
+  | x > 0         = helper xs 1 ++ " + " ++ show x
+  | x < 0         = helper xs 1 ++ " - " ++ show (-x)
+  where 
+    helper :: (Num a, Ord a) => [a] -> Int -> String
+    helper [] a = ""
+    helper (x:xs) n
+      | x == 0              = helper xs (n + 1)
+      | x == 1 && xs == []  = helper xs (n + 1) ++ "X^" ++ show n
+      | x > 0 && xs ==[]    = helper xs (n + 1) ++  show x ++ "X^" ++ show n
+      | x < 0 && xs == []   = helper xs (n + 1) ++ show x ++ "X^" ++ show n
+      | x == 1              = helper xs (n + 1) ++ " + " ++ "X^" ++ show n
+      | x > 0               = helper xs (n + 1) ++ " + " ++ show x ++ "X^" ++ show n
+      | x < 0               = helper xs (n + 1) ++ " - " ++ show (-x) ++ "X^" ++ show n
+\end{code}

@@ -1,0 +1,92 @@
+\chapter{Zero Finding Methods}
+\section{Program Headers}
+\paratag{SWDDD ZERO HEADER}
+This file and all items defined in it are contained in the module ``Solver''.  This module contains routines to solve equations.  In most cases this involves finding ``zeros'' of a function.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The program \shalltag{10} be in a module named ``Solver''.
+\item The solver module \shalltag{20} import the Complex module.
+\end{itemize}
+
+\subsection{Header Code}
+\begin{code}
+module Solver where
+
+import Complex
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Bisection Method}
+\paratag{SWRDD ZERO BISECT}
+The bisection method starts with two guesses for the zero.  The function must evaluate to a positive value at one guess and a negative value at the other.  At each iteration, the middle value is tested to determine on which side the zero lies.  The interval is then reduced by half.  After a sufficient number of iterations or a sufficiently small interval is reached, the value is returned.
+
+Note that each iteration produces one additional bit of the solution, so convergence is linear.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The bisection algorithm \shalltag{10} accept as input a function, a lower limit, and an upper limit.
+\item The bisection algorithm \shalltag{20} return a value for the zero and a string containing a message.
+\item The input function \shalltag{30} accept a numeric input and return a numeric result.
+\item The value of the input function \shalltag{40} be checked at the upper and lower limit to ensure that the signs are opposite.
+\item If the signs are not opposite, an error message \shalltag{50} be returned.
+\item The iteration limit \shalltag{60} be set to 64.
+\item If a zero is reached exactly, iteration \shalltag{70} be terminated and that value returned.
+\end{itemize}
+
+\subsection{Function Definition}
+This function finds a zero of a function using the bisection method.
+\begin{code}
+bisect :: (Floating a, Ord a) => (a -> a) -> a -> a -> (a, String)
+bisect f lower upper
+  | (f lower) == 0             = (lower, "Zero found exactly at lower limit.")
+  | (f upper) == 0             = (upper, "Zero found exactly at upper limit.")
+  | (f lower) * (f upper) >= 0 = (0, "ERROR: Function has same sign at upper and lower limits.")
+  | otherwise                  = bisectHelper f lower upper 64
+  where
+    bisectHelper :: (Floating a, Ord a) => (a -> a) -> a -> a -> Int -> (a, String)
+    bisectHelper f lower upper limit
+      | limit <= 0              = (mid, "Zero found between " ++ show lower ++ " and " ++ show upper)
+      | (f mid) == 0            = (mid, "Zero found exactly with " ++ show limit ++ " iterations left to go.")
+      | (f lower) * (f mid) < 0 = bisectHelper f lower mid (limit - 1)
+      | otherwise               = bisectHelper f mid upper (limit - 1)
+      where
+        mid = (lower + upper) / 2
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Newton's Method}
+\paratag{SWRDD ZERO NEWTON}
+Newton's method (aka Newton-Raphson method) is one of the better known root finding algorithms.  Its main drawback is that it depends on having the derivative of the function.  The basic iteration step is:
+\[
+p_{n+1} = p_n - \frac{f(p_n)}{f'(p_n)}
+\]
+Note that if $f'(p_n)$ becomes zero, the iteration cannot be continued.
+
+When it works, it can achieve quadratic convergence.  However, it is not always guaranteed to work.
+\subsection{Requirements}
+\begin{itemize}
+\item The Newton's method algorithm \shalltag{10} accept a function, its derivative, a starting guess, a tolerance, and number of iterations.
+\item The Newton's method algorithm \shalltag{20} return a result and a message indicating the meaning of the result.
+\item If the derivative of the function is equal to zero, iteration \shalltag{30} be terminated and an error message returned.
+\item If the required tolerance is not reached before the allowed number of itereations, an error message \shalltag{40} be returned.
+\end{itemize}
+
+\subsection{Function Definition}
+\begin{code}
+newton :: (Floating a, Ord a) => (a -> a) -> (a -> a) -> a -> a -> Int ->(a, String)
+newton f fP guess tol limit
+  | fP guess == 0           = (guess, "ERROR: Derivative of function reached zero.  Cannot continue.")
+  | abs(next - guess) < tol = (guess, "Solution found with " ++ show limit ++ " iterations remaining.")
+  | limit <= 0              = (guess, "ERROR: No solution within tolerance within allowed iterations.")
+  | otherwise               = newton f fP next tol (limit - 1)
+  where
+    next = guess - (f guess) / (fP guess)
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{M\"{u}ler's Method}
+\paratag{SWRDD ZERO M\"{U}LER}
+M\"{u}ler's method works by fitting a quadratic curve and using it to approximate the zero.  In order to make a quadratic curve, three points are needed.  M\"{u}ler's method will converge to a zero unless the three points all evaluate to the same value.  Since a quadratic curve is being approximated, complex zeros will also be found.
+\subsection{Requirements}
+\subsection{Function Definition}

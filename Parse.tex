@@ -1,0 +1,328 @@
+%--------------------------------------------------------------------------------------------------
+\chapter{Parsing Utilities}
+\section{Program Headers}
+\paratag{SWDDD PARSE HEADER}
+This file and all items defined in it are contained in the module ``Parse''.
+
+\subsection{Requirements}
+\begin{itemize}
+\item The program \shalltag{10} be in a module named ``Parse''.
+\item The Char module \shalltag{20} be imported to provide character functions.
+\item Only the parsePoly function \shalltag{30} be exported.
+\end{itemize}
+
+\subsection{Header Code}
+\begin{code}
+module Parse (parsePoly) where
+
+import Char (isDigit, isSpace)
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Get Coefficient}
+\paratag{SWDDD PARSE POLY COEF}
+This function is part of the tokenizer and is used to extract a coefficient from the input string.  The coefficient should be a valid double precision number.
+\subsection{Requirments}
+\begin{itemize}
+\item A coefficient \shalltag{10} be a double precision number.
+\item If a coefficient is omitted, its value \shalltag{20} be set to 1.
+\item If the sign is omitted, it \shalltag{30} be assumed to be positive.
+\item Whitespace characters \shalltag{40} be ignored.
+\item The digits before or after the decimal point \shalltag{50} be optional.
+\item The decimal point \shalltag{60} be optional.
+\item The exponent \shalltag{70} be optional.
+\item If the exponent is present, it \shalltag{80} consist of the letter 'E' followed by an optional sign and non-optional digits.
+\item The coefficient \shalltag{90} be terminated by the end of the input string, a sign, the letter 'X', or an error condition.
+\end{itemize}
+
+\subsection{Function Definitions}
+
+The coefficient parser is implemented using a state machine.  Some helper functions are also defined.
+\subsubsection{Define Support}
+Define a data type for the states and some helper functions.
+\begin{code}
+data GetCoefStates = StCoefStart | StCoefFoundSign | StCoefPreDecimal | StCoefPostDecimal | StCoefFoundExp | StCoefExpSign | StCoefExpValue
+
+isSign :: Char -> Bool
+isSign x = (x == '+') || (x == '-')
+
+isExp :: Char -> Bool
+isExp x = (x == 'e') || (x == 'E')
+
+isX :: Char -> Bool
+isX x = (x == 'x') || (x == 'X')
+\end{code}
+\subsubsection{Define the Main Coefficient Parser}
+The parser takes a state and a string as inputs and returns a tuple consisting of two strings.  The first string is the parsed data and the second string is the remaining data.
+
+If no input string is passed, two null strings are returned.
+\begin{code}
+getCoefficient :: GetCoefStates -> String -> (String, String)
+getCoefficient _ [] = ([], [])
+\end{code}
+\subsubsection{The Start State}
+In the first state, we can take a digit, a sign, a decimal point, or an ``X''.
+\begin{code}
+getCoefficient StCoefStart (x:xs)
+  | isSpace x = (skip1, skip2)
+  | isDigit x = (x : dig1, dig2)
+  | x == '-'  = (x : sign1, sign2)
+  | x == '+'  = (sign1, sign2)
+  | isX x     = ("1", x : xs)
+  | x == '.'  = (x : dig3, dig4)
+  | otherwise = ("*Error", "*Error")
+    where
+      (skip1, skip2) = getCoefficient StCoefStart xs
+      (dig1, dig2) = getCoefficient StCoefPreDecimal xs
+      (dig3, dig4) = getCoefficient StCoefPostDecimal xs
+      (sign1, sign2) = getCoefficient StCoefFoundSign xs
+\end{code}
+\subsubsection{The Found Sign State}
+Once a sign has been found, signs are no longer valid characters.
+\begin{code}
+getCoefficient StCoefFoundSign (x:xs)
+  | isSpace x = (skip1, skip2)
+  | isDigit x = (x : dig1, dig2)
+  | x == '.'  = (x : dig3, dig4)
+  | isX x     = ("1", x : xs)
+  | otherwise = ("*Error", "*Error")
+    where
+      (skip1, skip2) = getCoefficient StCoefFoundSign xs
+      (dig1, dig2) = getCoefficient StCoefPreDecimal xs
+      (dig3, dig4) = getCoefficient StCoefPostDecimal xs
+\end{code}
+\subsubsection{The Pre-Decimal Point State}
+Now, process the digits before the decimal point.
+\begin{code}
+getCoefficient StCoefPreDecimal (x:xs)
+  | isSpace x = (dig1, dig2)
+  | isDigit x = (x : dig1, dig2)
+  | isExp x   = (x : exp1, exp2)
+  | isX x     = ([], x : xs)
+  | isSign x  = ([], x : xs)
+  | x == '.'  = (x : dec1, dec2)
+  | otherwise = ("*Error", "*Error")
+    where
+      (dig1, dig2) = getCoefficient StCoefPreDecimal xs
+      (dec1, dec2) = getCoefficient StCoefPostDecimal xs
+      (exp1, exp2) = getCoefficient StCoefFoundExp xs
+\end{code}
+\subsubsection{The Post-Decimal Point State}
+If a decimal point has been found, process any digits after it.
+\begin{code}
+getCoefficient StCoefPostDecimal (x:xs)
+  | isSpace x = (dig1, dig2)
+  | isDigit x = (x : dig1, dig2)
+  | isExp x   = (x : exp1, exp2)
+  | isX x     = ([], x : xs)
+  | isSign x  = ([], x : xs)
+  | otherwise = ("*Error", "*Error")
+    where
+      (dig1, dig2) = getCoefficient StCoefPostDecimal xs
+      (exp1, exp2) = getCoefficient StCoefFoundExp xs
+\end{code}
+\subsubsection{The Found Exponent State}
+If an ``E'' has been found, look for the exponent.
+\begin{code}
+getCoefficient StCoefFoundExp (x:xs)
+  | isSpace x = (exp1, exp2)
+  | isDigit x = (x : dig1, dig2)
+  | isSign x  = (x : sign1, sign2)
+  | otherwise = ("*Error", "*Error")
+    where
+      (exp1, exp2) = getCoefficient StCoefFoundExp xs
+      (sign1, sign2) = getCoefficient StCoefExpSign xs
+      (dig1, dig2) = getCoefficient StCoefExpValue xs
+\end{code}
+\subsubsection{The Exponent Sign State}
+The exponent should have a sign.
+\begin{code}
+getCoefficient StCoefExpSign (x:xs)
+  | isSpace x = (sign1, sign2)
+  | isDigit x = (x : dig1, dig2)
+  | otherwise = ("*Error", "*Error")
+    where
+      (sign1, sign2) = getCoefficient StCoefExpSign xs
+      (dig1, dig2) = getCoefficient StCoefExpValue xs
+\end{code}
+\subsubsection{The Exponent Value State}
+The exponent value should consist only of digits.
+\begin{code}
+getCoefficient StCoefExpValue (x:xs)
+  | isSpace x = (dig1, dig2)
+  | isDigit x = (x : dig1, dig2)
+  | isSign x  = ([], x : xs)
+  | isX x     = ([], x : xs)
+  | otherwise = ("*Error", "*Error")
+    where
+      (dig1, dig2) = getCoefficient StCoefExpValue xs
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Get Exponent}
+\paratag{SWDDD PARSE POLY EXP}
+This function is part of the tokenizer and is used to extract an exponent from the input string.  The exponent should be a positive integer.
+\subsection{Requirments}
+\begin{itemize}
+\item An exponent \shalltag{10} be a positive integer.
+\item If an exponent is omitted and the 'X' is present, its value \shalltag{20} be set to 1.
+\item If both the exponent and the 'X' are omitted, its value \shalltag{30} be set to 0.
+\item Whitespace characters \shalltag{40} be ignored.
+\item The exponent \shalltag{90} be terminated by the end of the input string, a sign, or an error condition.
+\end{itemize}
+
+\subsection{Function Definitions}
+The exponent parser is similar to the coefficient parser, but simpler.  All it needs to do is to look for the independent variable, ``X'', the exponent symbol, and then a string of digits.
+\subsubsection{Define Support}
+A data type for the states is defined.
+\begin{code}
+data GetExpStates = StExpStart | StExpFoundX | StExpFoundPow | StExpDigits
+\end{code}
+\subsubsection{Define the Exponent Parser}
+The exponent parser definition is similar to the coefficient parser.  It takes a state and a string and returns two string.  If, in the start state, the input string is null, an exponent of zero is returned.  If the input string is null, two null strings are returned.
+\begin{code}
+getExponent :: GetExpStates -> String -> (String, String)
+
+getExponent StExpStart [] = ("0", [])
+getExponent StExpFoundX [] = ("1", [])
+getExponent _ [] = ([], [])
+\end{code}
+\subsubsection{The Start State}
+In this state, an ``X'' is expected.  If a sign is found, then there is no independent variable and the exponent is zero.
+\begin{code}
+getExponent StExpStart (x:xs)
+  | isSpace x = (skip1, skip2)
+  | isSign x  = ("0", x : xs)
+  | isX x     = (dig1, dig2)
+  | otherwise = ("*Error", "*Error")
+    where
+      (skip1, skip2) = getExponent StExpStart xs
+      (dig1, dig2) = getExponent StExpFoundX xs
+\end{code}
+\subsubsection{The Found X State}
+In this state, we should either find a sign or an exponent symbol.
+\begin{code}
+getExponent StExpFoundX (x:xs)
+  | isSpace x    = (skip1, skip2)
+  | x == '^'     = (pow1, pow2)
+  | isSign x     = ("1", x : xs)
+  | otherwise    = ("*Error", "*Error")
+    where
+      (skip1, skip2) = getExponent StExpFoundX xs
+      (pow1, pow2) = getExponent StExpFoundPow xs
+\end{code}
+\subsubsection{The Found Power State}
+Once the exponent symbol has been found, the only valid thing to follow is a digit.
+\begin{code}
+getExponent StExpFoundPow (x:xs)
+  | isSpace x = (skip1, skip2)
+  | isDigit x = (x : dig1, dig2)
+  | otherwise = ("*Error", "*Error")
+    where
+      (dig1, dig2) = getExponent StExpDigits xs
+      (skip1, skip2) = getExponent StExpFoundPow xs
+\end{code}
+\subsubsection{The Exponent Digits State}
+Now, just accumulate all the digits until something else is found.
+\begin{code}
+getExponent StExpDigits (x:xs)
+  | isSpace x = (dig1, dig2)
+  | isDigit x = (x : dig1, dig2)
+  | isSign x  = ([], x : xs)
+  | otherwise = ("*Error", "*Error")
+    where
+      (dig1, dig2) = getExponent StExpDigits xs
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Tokenizer}
+\paratag{SWDDD PARSE POLY TOKEN}
+The tokenizer reads through the input string and breaks it up into tokens.
+\subsection{Requirments}
+\begin{itemize}
+\item A parsed polynomial string \shalltag{10} return a list of coefficients and exponents.
+\item The coefficients \shalltag{20} be double precision floating point numbers.
+\item The exponents \shalltag{30} be integers.
+\item The independent variable \shalltag{40} be `X'.
+\item If the exponent on `X' is omitted, it \shalltag{50} be assumed to be 1.
+\item If the coefficient is not followed by the independent variable, the exponent \shalltag{60} be assumed to be 0.
+\end{itemize}
+
+\subsection{Function Definitions}
+\begin{code}
+tokenize :: String -> [(Double, Int)]
+tokenize [] = []
+tokenize x
+  | rem1 == "*Error" = []
+  | rem2 == "*Error" = []
+  | otherwise        = (coeff, exp) : tokenize rem2
+  where
+  (coeff1, rem1) = getCoefficient StCoefStart x
+  (exp1, rem2) = getExponent StExpStart rem1
+  coeff = (read coeff1) :: Double
+  exp = (read exp1) :: Int
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Build}
+\paratag{SWDDD PARSE POLY BUILD}
+The build process takes a tokenized polynomial (a list of coefficients and exponents) and creates a polynomial array.
+\subsection{Requirments}
+\begin{itemize}
+\item The build process \shalltag{10} take the tokenized polynomial and construct a polynomial array.
+\item The polynomial array \shalltag{20} be an array of double precision numbers.
+\item The polynomial array \shalltag{30} contain the coefficients.
+\item The coefficients \shalltag{40} be located in the indices corresponding to the exponents.
+\end{itemize}
+
+\subsection{Function Definitions}
+\begin{code}
+maxToken :: Int -> [(Double, Int)] -> Int
+maxToken x [] = x
+
+maxToken x (y:ys)
+  | x > t = maxToken x ys
+  | otherwise = maxToken t ys
+  where
+    (_, t) = y  
+
+zeros :: [Double]
+zeros = 0.0 : zeros
+
+updatePoly :: [(Double, Int)] -> [Double] -> [Double]
+updatePoly [] x = x
+
+updatePoly (x:xs) y = result
+  where
+    (coeff, index) = x
+    beg = take index y
+    end = drop (index + 1) y
+    mid = y!!index + coeff
+    result = updatePoly xs (beg ++ [mid] ++ end)
+
+buildPoly :: [(Double, Int)] -> [Double]
+buildPoly [] = []
+
+buildPoly x = result
+  where
+    order = maxToken 0 x
+    arry = take (order + 1) zeros
+    result = updatePoly x arry
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Parse}
+\paratag{SWDDD PARSE POLY PARSE}
+The polynomial parser combines the process of the tokenizer and the builder.
+\subsection{Requirments}
+\begin{itemize}
+\item The parser \shalltag{10} convert a string containing a polynomial into an array of double precision numbers.
+\end{itemize}
+
+\subsection{Function Definitions}
+\begin{code}
+parsePoly :: String -> [Double]
+parsePoly [] = []
+
+parsePoly x = buildPoly (tokenize x)
+\end{code}

@@ -1,0 +1,510 @@
+\chapter{Main Program}
+%--------------------------------------------------------------------------------------------------
+\section{Program Headers}
+\paratag{SWDDD MAIN HEADER}
+The main part of the program is contained in the ``Main'' module.
+\subsection{Requirements}
+\begin{itemize}
+\item The program \shalltag{10} be in a module named ``Main''.
+\item The Main module \shalltag{20} import the Polynomial module.
+\item The Main module \shalltag{30} import the Parse module.
+\item The Main module \shalltag{40} import the Solver module.
+\item Polynomials \shalltag{50} be stored in a list indexed by polynomial name.
+\item The polynomial name \shalltag{60} be a String.
+\item The polynomial \shalltag{70} be a list of double.
+\end{itemize}
+
+\subsection{Header Code}
+\begin{code}
+module Main where
+
+import Char (isDigit, isSpace, isLower, toUpper)
+import Text.Printf
+import Polynomial
+import Parse
+import Solver
+import Debug.Trace
+
+type Name = String
+type Poly = [Double]
+type Entry = (String, [Double])
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Parse Utilities}
+\paratag{SWDDD MAIN UTIL}
+\subsection{Requirements}
+\begin{itemize}
+\item The first word function \shalltag{10} return the first word of a line and the remainder of the line.
+\item The uppercase function \shalltag{20} check if each character is lowercase, and if so, convert it to uppercase.
+\item The find polynomial function \shalltag{30} search the polynomial library for a specified polynomial and return it.
+\item If no the specified polynomial is not found, the find polynomial function \shalltag{40} return an empty list.
+\end{itemize}
+
+\subsection{Function Definition}
+Function to convert a string to uppercase.
+\begin{code}
+upCase :: String -> String
+upCase [] = []
+upCase (x:xs)
+  | isLower x = (toUpper x) : upCase xs
+  | otherwise = x : upCase xs
+\end{code}
+Function to return the first word of a string, where words are separated by white space.
+\begin{code}
+firstWord :: String -> (String, String)
+firstWord [] = ([], [])
+firstWord (x:xs)
+  | isSpace x = ([], xs)
+  | otherwise = (x : cmd, rest)
+    where
+      (cmd, rest) = firstWord xs
+\end{code}
+Function to search the polynomial library for the name of a polynomial
+\begin{code}
+findPoly :: [(String, [Double])] -> String -> [Double]
+findPoly [] _ = []
+
+findPoly (x:xs) key
+  | key == name = poly
+  | otherwise   = findPoly xs key
+  where
+    (name, poly) = x
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Command Dispatcher}
+\paratag{SWDDD MAIN CMD}
+\subsection{Requirements}
+\begin{itemize}
+\item The command dispatcher \shalltag{10} call the appropriate function for each command.
+\item If an unrecognized command is given, an error message \shalltag{20} be produced.
+\end{itemize}
+\subsection{Function Definition}
+\begin{code}
+dispatch :: [Entry] -> String -> String -> ([Entry], String)
+dispatch lib cmd rest
+  | cmd == "ADD"       = binPoly lib rest polyAdd
+  | cmd == "DEL"       = delPoly lib rest
+  | cmd == "DERIVE"    = calcPoly lib rest polyDerive
+  | cmd == "DIV"       = (lib, "Polynomial division not yet implemented.")
+  | cmd == "EVAL"      = evaluate lib rest
+  | cmd == "EXIT"      = (lib, "Exit command entered.")
+  | cmd == "FACTOR"    = (lib, "Polynomial factoring not yet implemented.")
+  | cmd == "HELP"      = (lib, help)
+  | cmd == "INTEGRATE" = calcPoly lib rest polyIntegrate
+  | cmd == "LIST"      = list lib
+  | cmd == "MUL"       = binPoly lib rest polyMul
+  | cmd == "NEW"       = newPoly lib rest
+  | cmd == "QUIT"      = (lib, "Quit command entered.")
+  | cmd == "ROOT"      = root lib rest
+  | cmd == "TABLE"     = table lib rest
+  | otherwise          = (lib, "<" ++ cmd ++ "> is not a valid command.")
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Help Message}
+\paratag{SWDDD MAIN HELP}
+\subsection{Requirements}
+\begin{itemize}
+\item The help message \shalltag{10} contain a help message for the program.
+\item The help message \shalltag{20} identify the valid commands, parameters, and function of the command.
+\end{itemize}
+\subsection{Function Definition}
+\begin{code}
+help :: String
+help = "The following commands are defined.\n" ++
+       "ADD P1 P2 P3\n" ++
+       "   (add polynomials P1 and P2 together producing P3)\n" ++
+       "DEL P1\n" ++
+       "   (deletes polynomial named P1 from the saved polynomials)\n" ++
+       "DERIVE P1 P2\n" ++
+       "   (calculate the derivative of polynomial P1 and save as P2)\n" ++
+       "DIV\n" ++
+       "   (command not yet implemented)\n" ++
+       "EVAL P1 VALUE\n" ++
+       "   (calculate the value of polynomial P1 at VALUE)\n" ++
+       "EXIT\n" ++
+       "   (exit the program)\n" ++
+       "FACTOR\n" ++
+       "   (command not yet implemented)\n" ++
+       "HELP\n" ++
+       "   (produce this help message)\n" ++
+       "INTEGRATE P1 P2\n" ++
+       "   (calculate the integral of polynomial P1 and save as P2)\n" ++
+       "LIST\n" ++
+       "   (print a list of all saved polynomials)\n" ++
+       "MUL P1 P2 P3\n" ++
+       "   (multiply polynomials P1 and P2 together producing P3)\n" ++
+       "NEW NAME POLY\n" ++
+       "   (parse POLY as a polynomial and save it with the name NAME)\n" ++
+       "QUIT\n" ++
+       "   (quit the program)\n" ++
+       "ROOT TYPE P1 OTHER\n" ++
+       "   (find a root of P1 using method TYPE.  OTHER depends on type selected\n" ++
+       "ROOT BISECT P1 LOWER UPPER\n" ++
+       "   (use bisection method with LOWER and UPPER limits)\n" ++
+       "ROOT NEWTON P1 GUESS TOL ITER\n" ++
+       "   (use Newton's method with starting GUESS, tolerance TOL and iteration\n" ++
+       "    limit ITER)\n" ++
+       "TABLE P1 START STOP INCR\n" ++
+       "   (print a table of values for P1 starting from START an continuing to\n" ++
+       "    STOP with increment INCR)\n"
+\end{code}
+%--------------------------------------------------------------------------------------------------
+\section{Command Loop}
+\paratag{SWDDD MAIN LOOP}
+\subsection{Requirements}
+\begin{itemize}
+\item The main loop \shalltag{10} print a prompt and request a line of input.
+\item If the EXIT command is given, the main loop \shalltag{20} terminate.
+\item All other commands \shalltag{30} be passed to the command dispatcher function
+\end{itemize}
+\subsection{Function Definition}
+\begin{code}
+mainLoop :: [Entry] -> IO ()
+
+mainLoop lib = do
+  putStr "> "
+  line <- getLine
+  let (cmd, rest) = firstWord (upCase line)
+      (newLib, msg) = dispatch lib cmd rest
+  putStrLn msg
+  if cmd == "EXIT" || cmd == "QUIT"
+  then return ()
+  else mainLoop newLib
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{List Command}
+\paratag{SWDDD MAIN LIST}
+\subsection{Requirements}
+\begin{itemize}
+\item The list command \shalltag{10} list all the saved polynomials.
+\item If no polynomials have been saved, an appropriate message \shalltag{20} be displayed.
+\end{itemize}
+\subsection{Function Definition}
+Two functions are defined.  The list function checks if the library is null and prints an appropriate message.  If the library is not null, the temp list iterates through it and prints out the contents.
+\begin{code}
+list :: [Entry] -> ([Entry], String)
+list [] = ([], "No polynomials have been saved.")
+  
+list lib = (lib, tempList lib)
+
+tempList :: [Entry] -> String
+tempList [] = ""
+tempList (x:xs) = "<" ++ name ++ "> = <" ++ (polyShow poly) ++ ">\n" ++ tempList xs
+  where (name, poly) = x
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{New Polynomial Command}
+\paratag{SWDDD MAIN NEW}
+\subsection{Requirements}
+\begin{itemize}
+\item The new command \shalltag{10} parse a polynomial and add it to the list.
+\item Each polynomial added to the list \shalltag{20} have a unique name associated with it.
+\item If the specified name is not unique, an error message \shalltag{30} be displayed and no new entry made.
+\end{itemize}
+\subsection{Function Definition}
+The new polynomial function inserts a new polynomial into the library.  It defines three functions that are used locally.  Note that new entries are added to the beginning of the library list.
+\begin{code}
+newPoly :: [Entry] -> String -> ([Entry], String)
+newPoly lib [] = (lib, "No polynomial or name specified")
+
+newPoly lib rest = checkName lib name polyText
+  where
+    (name, polyText) = firstWord rest
+
+    checkName :: [Entry] -> String -> String -> ([Entry], String)
+    checkName lib name polyText
+      | name == ""              = (lib, "No name specified for polynomial")
+      | findPoly lib name /= [] = (lib, "Name <" ++ name ++ "> already exists")
+      | otherwise               = checkPoly lib name polyText
+
+    checkPoly ::  [Entry] -> String -> String -> ([Entry], String)
+    checkPoly lib name polyText = insertPoly lib name polyList
+      where
+        polyList = parsePoly polyText
+
+    insertPoly :: [Entry] -> String -> Poly -> ([Entry], String)
+    insertPoly lib _ [] = (lib, "No valid polynomial specified.")
+    insertPoly lib "" _ = (lib, "No polynomial name specified.")
+    insertPoly lib name polyList = ((name, polyList) : lib,
+      "Polynomial added to library.")
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Delete Polynomial Command}
+\paratag{SWDDD MAIN DEL}
+\subsection{Requirements}
+\begin{itemize}
+\item The delete command \shalltag{10} remove the specified polynomial from the library.
+\end{itemize}
+\subsection{Function Definition}
+\begin{code}
+delPoly :: [Entry] -> String -> ([Entry], String)
+delPoly lib [] = (lib, "No polynomial name specified.")
+
+delPoly lib name
+  | findPoly lib name == [] = (lib, "Polynomial <" ++ name ++ "> does not exists")
+  | otherwise               = ((removePoly lib name), "Polynomial <" ++ name ++ "> deleted.")
+  where
+    removePoly ::  [Entry] -> String -> [Entry]
+    removePoly [] name = []
+    removePoly (l:ib) index
+      | index == name = removePoly ib index
+      | otherwise     = l : (removePoly ib index)
+      where
+        (name, _) = l
+\end{code}
+
+
+%--------------------------------------------------------------------------------------------------
+\section{Binary Polynomial Commands}
+\paratag{SWDDD MAIN BINARY}
+\subsection{Requirements}
+\begin{itemize}
+\item The binary polynomial commands \shalltag{10} take two polynomials for input and produce a single polynomial output.
+\item The input polynomials \shalltag{20} be specified by name in the polynomial library.
+\item The output polynomial \shalltag{30} be specified as a name to be added to the polynomial library.
+\end{itemize}
+\subsection{Function Definition}
+The type signature for the checkArg helper function is commented out because I couldn't find one that would work.
+\begin{code}
+binPoly :: [Entry] -> String -> ([Double] -> [Double] -> [Double]) -> ([Entry], String)
+binPoly lib [] _ = (lib, "No polynomials specified.")
+
+binPoly lib rest op = (newLib, msg)
+  where
+    (p1, rest1) = firstWord rest
+    (p2, p3) = firstWord rest1
+    (newLib, msg) = checkArg lib p1 p2 p3 op
+
+--    checkArg :: [Entry] -> String -> String -> String -> ([Double] -> [Double] -> [Double]) -> ([Entry], String)
+    checkArg lib "" _ _ _ = (lib, "No input polynomial specified.")
+    checkArg lib _ "" _ _ = (lib, "No input polynomial specified.")
+    checkArg lib _ _ "" _ = (lib, "No output polynomial specified.")
+    checkArg lib p1 p2 p3 op
+      | poly1 == [] = (lib, "Polynomial <" ++ p1 ++ "> not found.")
+      | poly2 == [] = (lib, "Polynomial <" ++ p2 ++ "> not found.")
+      | poly3 /= [] = (lib, "Polynomial <" ++ p3 ++ "> already exists.")
+      | otherwise   = ((p3, (op poly1 poly2)) : lib, "New polynomial created.")
+      where
+        poly1 = findPoly lib p1
+        poly2 = findPoly lib p2
+        poly3 = findPoly lib p3
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Calculus Polynomial Commands}
+\paratag{SWDDD MAIN CALC}
+\subsection{Requirements}
+\begin{itemize}
+\item The calculus polynomial commands \shalltag{10} take one polynomial for input and produce a single polynomial output.
+\item The input polynomial \shalltag{20} be specified by name in the polynomial library.
+\item The output polynomial \shalltag{30} be specified as a name to be added to the polynomial library.
+\end{itemize}
+\subsection{Function Definition}
+The type signature for the checkArg helper function is commented out because I couldn't find one that would work.
+\begin{code}
+calcPoly :: [Entry] -> String -> ([Double] -> [Double]) -> ([Entry], String)
+calcPoly lib [] _ = (lib, "No polynomials specified.")
+
+calcPoly lib rest op = (newLib, msg)
+  where
+    (p1, p2) = firstWord rest
+    (newLib, msg) = checkArg lib p1 p2 op
+
+--    checkArg :: [Entry] -> String -> String -> ([Double] -> [Double] -> [Double]) -> ([Entry], String)
+    checkArg lib "" _ _ = (lib, "No input polynomial specified.")
+    checkArg lib _ "" _ = (lib, "No output polynomial specified.")
+    checkArg lib p1 p2 op
+      | poly1 == [] = (lib, "Polynomial <" ++ p1 ++ "> not found.")
+      | poly2 /= [] = (lib, "Polynomial <" ++ p2 ++ "> already exists.")
+      | otherwise   = ((p2, op poly1) : lib, "New polynomial created.")
+      where
+        poly1 = findPoly lib p1
+        poly2 = findPoly lib p2
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Evaluate Polynomial Command}
+\paratag{SWDDD MAIN EVAL}
+\subsection{Requirements}
+\begin{itemize}
+\item The evaluate polynomial command \shalltag{10} take one polynomial and a number for input and produce a single number output.
+\item The input polynomial \shalltag{20} be specified by name in the polynomial library.
+\item The specified polynomial \shalltag{30} be evaluated at the specified value.
+\end{itemize}
+\subsection{Function Definition}
+\begin{code}
+evaluate :: [Entry] -> String -> ([Entry], String)
+evaluate lib [] = (lib, "No polynomials specified.")
+
+evaluate lib rest = (newLib, msg)
+  where
+    (p1, value) = firstWord rest
+    (newLib, msg) = checkArg lib p1 ((read value) :: Double)
+
+    checkArg :: [Entry] -> String -> Double -> ([Entry], String)
+    checkArg lib "" _ = (lib, "No input polynomial specified.")
+    checkArg lib p1 value
+      | poly1 == [] = (lib, "Polynomial <" ++ p1 ++ "> not found.")
+      | otherwise   = (lib, msg)
+      where
+        poly1 = findPoly lib p1
+        msg = "Value is " ++ (show (polyEval poly1 value))
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Table Command}
+\paratag{SWDDD MAIN TABLE}
+\subsection{Requirements}
+\begin{itemize}
+\item The table commands \shalltag{10} take one polynomial, a starting value, an ending value, and an increment and produce a table.
+\item The input polynomial \shalltag{20} be specified by name in the polynomial library.
+\item The specified polynomial \shalltag{30} be evaluated at each value starting at the starting value, incrementing by the increment amount, until the ending value is reached.
+\end{itemize}
+\subsection{Function Definition}
+The table function consists of a main function and three helper functions.
+\begin{code}
+table :: [Entry] -> String -> ([Entry], String)
+table lib [] = (lib, "No polynomials specified.")
+
+table lib rest = (newLib, msg)
+  where
+    (p1, r1) = firstWord rest
+    (start, r2) = firstWord r1
+    (end, incr) = firstWord r2
+    (newLib, msg) = checkArg lib p1 ((read start) :: Double) ((read end) :: Double) ((read incr) :: Double)
+
+    checkArg :: [Entry] -> String -> Double -> Double -> Double -> ([Entry], String)
+    checkArg lib "" _ _ _ = (lib, "No input polynomial specified.")
+    checkArg lib p1 start end incr
+      | poly1 == [] = (lib, "Polynomial <" ++ p1 ++ "> not found.")
+      | otherwise   = (lib, msg)
+      where
+        poly1 = findPoly lib p1
+        msg = "  X  P(X)\n" ++ formatTable (tableHelp poly1 start end incr)
+
+    tableHelp :: Poly -> Double -> Double -> Double -> [(Double, Double)]
+    tableHelp [] _ _ _ = []
+    tableHelp _ _ _ 0 = []
+    tableHelp p1 start end incr
+      | start > end = []
+      | incr < 0    = []
+      | otherwise   = (start, (polyEval p1 start)) : tableHelp p1 (start + incr) end incr
+
+    formatTable :: [(Double, Double)] -> String
+    formatTable [] = ""
+    formatTable (x:xs) = (printf "%g  %g\n" y fy) ++ formatTable xs
+      where
+        (y, fy) = x
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Root Command}
+\paratag{SWDDD MAIN ROOTS}
+This function uses the root finding functions from the Solver module to find zeros of a polynomial.  Note that currently, only real roots are supported.
+\subsection{Requirements}
+\begin{itemize}
+\item The root finding function \shalltag{10} take a method, a polynomial, and one, or more initial guesses.
+\item The bisection method \shalltag{20} take two initial guesses that must bracket the root.
+\item The newton's method \shalltag{30} take one initial guess.
+\end{itemize}
+
+\subsection{Function Definition}
+The root command determines which root finding algorithm has been specified and calls the appropriate algorithm.
+\begin{code}
+root :: [Entry] -> String -> ([Entry], String)
+root lib [] = (lib, "No method or polynomial specified.")
+
+root lib rest = (lib, msg)
+  where
+    (method, r1) = firstWord rest
+    (p1, r2) = firstWord r1
+    poly = findPoly lib p1
+    msg = findMethod method poly r2
+\end{code}
+Determine which root finding method has been requested.
+\begin{code}
+    findMethod :: String -> Poly -> String -> String
+    findMethod method poly rest
+      | method == "BISECT" = findBisect poly rest
+      | method == "NEWTON" = findNewton poly rest
+      | poly == []         = "Polynomial not found in library."
+      | otherwise          = "Method <" ++ method ++ "> is not a defined root finding method."
+\end{code}
+Wrapper for the bisection algorithm.  Parse out the upper and lower limits and call the bisection algorithm.
+\begin{code}
+    findBisect :: Poly -> String -> String
+    findBisect poly rest
+      | l == "" = "No lower limit specified."
+      | u == "" = "No upper limit specified."
+      | lower >= upper = "Lower limit must be less than upper limit."
+      | otherwise = msg
+      where
+        (l, u) = firstWord rest
+        lower = (read l) :: Double
+        upper = (read u) :: Double
+        f = polyEval poly
+        (value, txt) = bisect f lower upper
+        msg = "Zero value of " ++ (show value) ++ " found.\n" ++ txt
+\end{code}
+Wrapper for Newton's method algorithm.  Parse out the guess, tolerance, and iteration limit.  Determine derivative of the polynomial.  Call Newton's method.
+\begin{code}
+    findNewton :: Poly -> String -> String
+    findNewton poly rest
+      | g == "" = "No guess specified."
+      | t == "" = "No tolerance specified."
+      | l == "" = "No iteration limit specified."
+      | otherwise = msg
+      where
+        (g, r) = firstWord rest
+        (t, l) = firstWord r
+        guess = (read g) :: Double
+        tol = (read t) :: Double
+        lim = (read l) :: Int
+        derivative = polyDerive poly
+        f = polyEval poly
+        fP = polyEval derivative
+        (value, txt) = newton f fP guess tol lim
+        msg = "Zero value of " ++ (show value) ++ " found.\n" ++ txt
+\end{code}
+
+%--------------------------------------------------------------------------------------------------
+\section{Main Function}
+\paratag{SWDDD MAIN MAIN}
+\subsection{Requirements}
+\begin{itemize}
+\item The main function \shalltag{10} print a header message when first entered.
+\item The main function \shalltag{20} print a prompt for input.
+\item The main function \shalltag{30} accept a line of input.
+\item The line of input \shalltag{40} be converted to uppercase.
+\item The main function \shalltag{50} pass the input line to the command parser for interpretation.
+\item Polynomials \shalltag{60} be stored in an array that can be indexed by name.
+\item The first word of the input line \shalltag{70} be interpreted as the command.
+\item The ADD command \shalltag{80} add two specified polynomials and produce a third.
+\item The DERIVE command \shalltag{90} calculate the derivative of the specified polynomial.
+\item The DEL command \shalltag{100} delete a polynomial from the saved list.
+\item The DIV command \shalltag{110} divide two specified polynomials and produce a third.
+\item  The EVAL command \shalltag{120} compute the value of the specified polynomial at a specific value of X.
+\item The EXIT command \shalltag{130} exit the program.
+\item The FACTOR command \shalltag{140} produce the factors of a polynomial.
+\item The HELP command \shalltag{150} produce a help message.
+\item The INTEGRATE command \shalltag{160} produce the integral of the specified polynomial.
+\item The LIST command \shalltag{170} produce a list of all the saved polynomials.
+\item The MUL command \shalltag{180} multiply two specified polynomials and produce a third.
+\item The NEW command \shalltag{190} create a new polynomial.
+\item The ROOT command \shalltag{200} use various algorithms to find roots of the specified polynomial.
+\item The TABLE command \shalltag{210} produce a table of values for the specified polynomial.
+\item The QUIT command \shalltag{220} exit the program.
+\end{itemize}
+
+\subsection{Function Definition}
+\begin{code}
+main = do
+  putStrLn "Simple symbolic math package."
+  mainLoop [("P1", [-1,2,3]), ("P2", [3,2,1])]
+\end{code}

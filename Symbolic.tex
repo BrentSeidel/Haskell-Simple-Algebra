@@ -1,0 +1,106 @@
+\documentclass[10pt, openany]{book}
+
+\usepackage{fancyhdr}
+\usepackage{multind}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{geometry}
+\geometry{letterpaper}
+
+\usepackage{fancyvrb}
+\usepackage{fancybox}
+%
+% Rules to allow import of graphics files in EPS format
+%
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.eps}
+\DeclareGraphicsRule{.eps}{eps}{.eps}{}
+%
+% Define rules to format and embed Haskell code in the text
+%
+\usepackage{listings}
+\lstloadlanguages{Haskell}
+\lstnewenvironment{code}
+    {\lstset{}%
+      \csname lst@SetFirstLabel\endcsname}
+    {\csname lst@SaveFirstLabel\endcsname}
+    \lstset{
+      basicstyle=\small\ttfamily,
+      flexiblecolumns=false,
+      basewidth={0.5em,0.45em},
+      literate={+}{{$+$}}1 {/}{{$/$}}1 {*}{{$*$}}1 {=}{{$=$}}1
+               {>}{{$>$}}1 {<}{{$<$}}1 {\\}{{$\lambda$}}1
+               {\\\\}{{\char`\\\char`\\}}1
+               {->}{{$\rightarrow$}}2 {>=}{{$\geq$}}2 {<-}{{$\leftarrow$}}2
+               {<=}{{$\leq$}}2 {=>}{{$\Rightarrow$}}2 
+               {\ .}{{$\circ$}}2 {\ .\ }{{$\circ$}}2
+               {>>}{{>>}}2 {>>=}{{>>=}}2
+               {|}{{$\mid$}}1
+               {/=}{{$ \ne$}}2
+    }
+%
+% For requirements trace tags
+%
+\makeindex{tags}
+\newcommand{\paratagname}{empty}
+\newcommand{\paratag}[1]{\renewcommand{\paratagname}{#1}{\begin{flushright}{\{\{#1\}\}}\end{flushright}}\index{tags}{#1}}
+\newcommand{\shalltag}[1]{\textbf{shall} {\tiny \{\{\paratagname\ #1\}\}}\index{tags}{\paratagname!\paratagname\ #1}}
+%
+%  Other commands
+%
+\newcommand{\settitle}[1]{\newcommand{\gettitle}{#1}\title{#1}}
+%
+% Setup page headers and footers
+%
+\fancypagestyle{plain}{
+\fancyhf{}
+\fancyhead[L]{\gettitle}
+\chead{}
+\rhead{}
+\fancyfoot[R]{Page \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}}
+
+\pagestyle{fancy}
+\fancyhead{}
+\lhead{\gettitle}
+\chead{}
+\rhead{}
+\cfoot{}
+\rfoot{Page \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+%
+% Setup paragraph formatting - no indentation with a blank line between paragraphs.
+%
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex plus 0.5ex minus 0.2ex}
+%
+% Front Matter
+%
+\settitle{Software Detail Design Document for Symbolic Math Package}
+\author{Brent Seidel \\ Phoenix, AZ}
+\date{ \today }
+%========================================================
+%%% BEGIN DOCUMENT
+\begin{document}
+%
+% Produce the front matter
+%
+\frontmatter
+\maketitle
+This document is \copyright 2009 by Brent Seidel.  The software included in this document was written as a learning exercise and is probably not very good Haskell code.  It may be freely distributed and used for any purpose whatsoever.  If you need someone who knows a little Haskell, contact me.
+\tableofcontents
+\mainmatter
+%--------------------------------------------------------------------------------------------------
+\include{Polynomial}
+\include{Parse}
+\include{Solver}
+\include{Main}
+%========================================================
+%
+%  Put various indices at the end of the document.
+%
+\addcontentsline{toc}{chapter}{Indices}
+\printindex{tags}{List of Trace Tags}
+\end{document}
